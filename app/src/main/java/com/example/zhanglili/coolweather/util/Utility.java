@@ -1,10 +1,13 @@
 package com.example.zhanglili.coolweather.util;
 
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.example.zhanglili.coolweather.db.City;
 import com.example.zhanglili.coolweather.db.Country;
 import com.example.zhanglili.coolweather.db.Province;
+import com.example.zhanglili.coolweather.gson.Weather;
+import com.google.gson.Gson;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -15,6 +18,26 @@ import org.json.JSONObject;
  */
 
 public class Utility {
+    private static final String TAG = "ZLL-Utility";
+
+    public static Weather handleWeahterResponce(String responce){
+        Log.d(TAG, "handleWeahterResponce: "+responce);
+        try {
+            JSONObject jsonObject = new JSONObject(responce);
+            JSONArray jsonArray = jsonObject.getJSONArray("HeWeather");
+            String weahterContent = jsonArray.getJSONObject(0).toString();
+            return new Gson().fromJson(weahterContent,Weather.class);
+
+
+        }catch (Exception e){
+            Log.d(TAG, "handleWeahterResponce: Exception"+e);
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+
     public static boolean handleProvinceResponce(String responce){
         if(!TextUtils.isEmpty(responce)){
             try {
@@ -67,7 +90,7 @@ public class Utility {
                     Country country = new Country();
                     country.setCityId(cityId);
                     country.setCountryName(object.getString("name"));
-                    country.setWeatherID(object.getString("weather+id"));
+                    country.setWeatherID(object.getString("weather_id"));
                     country.save();
                 }
                 return true;

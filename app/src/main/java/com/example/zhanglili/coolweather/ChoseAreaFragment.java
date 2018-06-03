@@ -1,6 +1,7 @@
 package com.example.zhanglili.coolweather;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -80,6 +81,12 @@ public class ChoseAreaFragment extends Fragment {
                 }else if(currentLevel==LEVEL_CITY){
                     selectedCity = cityList.get(i);
                     queryCountry();
+                }else if(currentLevel==LEVEL_COUNTRY){
+                    String weatherId = countryList.get(i).getWeatherID();
+                    Intent intent = new Intent(getActivity(),WeahterActivity.class);
+                    intent.putExtra("weather_id",weatherId);
+                    startActivity(intent);
+                    getActivity().finish();
                 }
             }
         });
@@ -120,11 +127,48 @@ public class ChoseAreaFragment extends Fragment {
 //        String address = "http://guolin.tech/api/china";
 //        queryFromServer(address,"province");
     }
-    private void queryCity(){}
+    private void queryCity(){
+        titleText.setText(selectedProvince.getProvinceName());
+        backButton.setVisibility(View.VISIBLE);
+        cityList = DataSupport.where("provinceid=?",String.valueOf(selectedProvince.getId())).find(City.class);
+        Log.d(TAG, "queryCity: "+cityList);
+        if(cityList.size()>0){
+            dataList.clear();
+            for(City city:cityList){
+                dataList.add(city.getCityName());
+
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            currentLevel = LEVEL_CITY;
+        }else{
+            int provinceCode = selectedProvince.getProvinceCode();
+            String address = "http://guolin.tech/api/china/"+provinceCode;
+            queryFromServer(address,"city");
+        }
+
+    }
     private void queryCountry(){
         titleText.setText(selectedCity.getCityName());
         backButton.setVisibility(View.VISIBLE);
-        countryList = DataSupport.where("cityid=?",String.valueOf(selectedCity.getId())).find(Country.class);
+        countryList = DataSupport.where("cityid=?",String.valueOf(selectedCity.
+                getId())).find(Country.class);
+        Log.d(TAG, "queryCountry: "+countryList);
+        if(countryList.size()>0){
+            dataList.clear();
+            for(Country country:countryList){
+                dataList.add(country.getCountryName());
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            currentLevel = LEVEL_COUNTRY;
+        }else{
+            int provinceCode = selectedProvince.getProvinceCode();
+            int cityCode = selectedCity.getCityCode();
+            String address = "http://guolin.tech/api/china/"+provinceCode+"/"+cityCode;
+            queryFromServer(address,"country");
+        }
+
 
     }
 
@@ -145,14 +189,28 @@ public class ChoseAreaFragment extends Fragment {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 boolean result = false;
-                Log.d(TAG, "onResponse: response"+response);
+
                 String responceText = response.body().string();
-                result = Utility.handleProvinceResponce(responceText);
+                Log.d(TAG, "onResponse: response"+responceText);
+                if("province".equals(type)){
+                    result = Utility.handleProvinceResponce(responceText);
+                }else if("city".equals(type)){
+                    result = Utility.handleCityResponce(responceText,selectedProvince.getId());
+                }else{
+                    result = Utility.handleCountryResponce(responceText,selectedCity.getId());
+                }
+
                 if(result){
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            queryProvince();
+                            if("province".equals(type)){
+                                queryProvince();
+                            }else if("city".equals(type)){
+                               queryCity();
+                            }else{
+                               queryCountry();
+                            }
                         }
                     });
                 }
